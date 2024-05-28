@@ -3,8 +3,13 @@ from inference.core.interfaces.camera.entities import VideoFrame
 from typing import Union, List, Optional
 from inference import InferencePipeline
 import time
-
+from openai import OpenAI
 api_key = "Zw9s4qJmfSsVpb4IerO9"
+
+my_cards = []
+enemies_cards = []
+
+client = OpenAI(api_key = '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')
 
 def on_prediction(
     predictions: Union[dict, List[Optional[dict]]],
@@ -30,7 +35,30 @@ def on_prediction(
             height = obj['height']
             label = obj['class']
             confidence = obj['confidence']
-
+            if confidence > 0.3:
+                if x in range(0, 1400) and y in range(1600, 1900):
+                    if label not in my_cards:
+                        print(f"Player placed {label}")
+                        my_cards.append(label)
+                elif x in range(0, 1400) and y in range(0, 300):
+                    if label not in enemies_cards:
+                        print(f"Opponent placed {label}")
+                        enemies_cards.append(label)
+            
+            if len(enemies_cards) == 4:
+                completion = client.chat.completions.create(
+                model="gpt-4.0-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a clash royale expert, that knows the best decks to play."},
+                    {"role": "user", "content": '''I am playing clash royale right now and need to know the deck of my opponent. 
+                     What deck includes a minion horde and ice spirit. Please answer in this format:
+                    Possible Cards: [YOUR ANSWER HERE]
+                    Win Rate with Deck: [YOUR ANSWER HERE]
+                    Strategies to counter deck: [YOUR ANSWER HERE]'''}
+                ]
+                )
+                print(completion.choices[0].message)
+                
             # Calculate top-left and bottom-right coordinates of the bounding box
             start_point = (int(x - width / 2), int(y - height / 2))
             end_point = (int(x + width / 2), int(y + height / 2))
@@ -47,6 +75,9 @@ def on_prediction(
             # Draw background rectangle for the label
             cv2.rectangle(image, (start_point[0], start_point[1] - text_height - baseline),
                           (start_point[0] + text_width, start_point[1]), (0, 255, 0), cv2.FILLED)
+            
+            cv2.rectangle(image, ([0, 1600]),([1400, 1900]), (255, 255, 255), 3)
+            cv2.rectangle(image, ([0, 0]),([1400, 300]), (255, 255, 255), 3)
 
             # Draw label text
             cv2.putText(image, label_text, (start_point[0], start_point[1] - baseline),
@@ -61,7 +92,7 @@ def on_prediction(
             break
 
 pipeline = InferencePipeline.init(
-    model_id="clash-royale-detection-cysig/4",
+    model_id="clash-royale-detection-cysig/5",
     max_fps=60,
     confidence=0.3,
     video_reference='/Users/owner/Downloads/clash-royale/test.mp4',
