@@ -35,19 +35,19 @@ def on_prediction(
             height = obj['height']
             label = obj['class']
             confidence = obj['confidence']
-            if confidence > 0.3:
-                if x in range(0, 1400) and y in range(1600, 1900):
-                    if label not in my_cards:
-                        print(f"Player placed {label}")
-                        my_cards.append(label)
-                elif x in range(0, 1400) and y in range(0, 300):
-                    if label not in enemies_cards:
-                        print(f"Opponent placed {label}")
-                        enemies_cards.append(label)
+            if x in range(0, 1400) and y in range(1600, 1900):
+                if label not in my_cards:
+                    print(f"Player placed {label}")
+                    my_cards.append(label)
+            elif x in range(0, 1400) and y in range(0, 300):
+                if label not in enemies_cards:
+                    print(f"Opponent placed {label}")
+                    enemies_cards.append(label)
             
-            if len(enemies_cards) == 4:
+            if len(enemies_cards) == 4 and prev_len != len(my_cards):
+
                 completion = client.chat.completions.create(
-                model="gpt-4.0-turbo",
+                model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a clash royale expert, that knows the best decks to play."},
                     {"role": "user", "content": '''I am playing clash royale right now and need to know the deck of my opponent. 
@@ -58,7 +58,7 @@ def on_prediction(
                 ]
                 )
                 print(completion.choices[0].message)
-                
+            prev_len = len(my_cards)
             # Calculate top-left and bottom-right coordinates of the bounding box
             start_point = (int(x - width / 2), int(y - height / 2))
             end_point = (int(x + width / 2), int(y + height / 2))
@@ -92,9 +92,9 @@ def on_prediction(
             break
 
 pipeline = InferencePipeline.init(
-    model_id="clash-royale-detection-cysig/5",
+    model_id="clash-royale-detection-cysig/6",
     max_fps=60,
-    confidence=0.3,
+    confidence=0.5,
     video_reference='/Users/owner/Downloads/clash-royale/test.mp4',
     on_prediction=on_prediction,
     api_key=api_key
