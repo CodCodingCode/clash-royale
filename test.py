@@ -76,7 +76,7 @@ def on_prediction(
             cv2.rectangle(image, (start_point[0], start_point[1] - text_height - baseline),
                           (start_point[0] + text_width, start_point[1]), (0, 255, 0), cv2.FILLED)
             
-            cv2.rectangle(image, ([0, 1600]),([1400, 1900]), (255, 255, 255), 3)
+            cv2.rectangle(image, ([0, 1650]),([1400, 1900]), (255, 255, 255), 3)
             cv2.rectangle(image, ([0, 0]),([1400, 300]), (255, 255, 255), 3)
 
             # Draw label text
