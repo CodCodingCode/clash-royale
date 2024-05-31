@@ -11,6 +11,13 @@ enemies_cards = []
 
 client = OpenAI(api_key = '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')
 
+card_zones =  {
+    "Player-Card1": ([0, 1650]), 
+    "Player-Card2": ([1400, 1900]), 
+    "Opponent-Card1": ([0, 0]), 
+    "Opponent-Card2": ([1400, 300])
+                }
+
 def on_prediction(
     predictions: Union[dict, List[Optional[dict]]],
     video_frame: Union[VideoFrame, List[Optional[VideoFrame]]]
@@ -75,9 +82,13 @@ def on_prediction(
             # Draw background rectangle for the label
             cv2.rectangle(image, (start_point[0], start_point[1] - text_height - baseline),
                           (start_point[0] + text_width, start_point[1]), (0, 255, 0), cv2.FILLED)
-            
-            cv2.rectangle(image, ([0, 1650]),([1400, 1900]), (255, 255, 255), 3)
-            cv2.rectangle(image, ([0, 0]),([1400, 300]), (255, 255, 255), 3)
+
+            # Card zones
+            cv2.rectangle(image, card_zones["Player-Card1"], card_zones['Player-Card2'], (255, 255, 255), 3)
+            cv2.rectangle(image, card_zones['Opponent-Card1'], card_zones["Opponent-Card2"], (255, 255, 255), 3)
+
+
+
 
             # Draw label text
             cv2.putText(image, label_text, (start_point[0], start_point[1] - baseline),
