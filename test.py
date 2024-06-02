@@ -4,6 +4,8 @@ from typing import Union, List, Optional
 from inference import InferencePipeline
 import time
 from openai import OpenAI
+import time
+
 api_key = "Zw9s4qJmfSsVpb4IerO9"
 
 my_cards = []
@@ -11,11 +13,27 @@ enemies_cards = []
 
 client = OpenAI(api_key = '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')
 
+
+# Colors
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+RED = (0, 0, 255)
+BLUE = (255, 0, 0)
+BLACK = (0, 0, 0)
+
 card_zones =  {
     "Player-Card1": ([0, 1650]), 
     "Player-Card2": ([1400, 1900]), 
     "Opponent-Card1": ([0, 0]), 
-    "Opponent-Card2": ([1400, 300])
+    "Opponent-Card2": ([1400, 300]),
+    "Player-princess1-tower1": ([405, 1083]),
+    "Player-princess1-tower2": ([536, 1415]),
+    "Player-princess2-tower1": ([900, 1115]),
+    "Player-princess2-tower2": ([1039, 1415]),
+    "Opponent-princess1-tower1": ([405, 610]),
+    "Opponent-princess1-tower2": ([545, 942]),
+    "Opponent-princess2-tower1": ([912, 608]),
+    "Opponent-princess2-tower2": ([1042, 942]),
                 }
 
 def on_prediction(
@@ -84,10 +102,23 @@ def on_prediction(
                           (start_point[0] + text_width, start_point[1]), (0, 255, 0), cv2.FILLED)
 
             # Card zones
-            cv2.rectangle(image, card_zones["Player-Card1"], card_zones['Player-Card2'], (255, 255, 255), 3)
-            cv2.rectangle(image, card_zones['Opponent-Card1'], card_zones["Opponent-Card2"], (255, 255, 255), 3)
+            cv2.rectangle(image, card_zones["Player-Card1"], card_zones['Player-Card2'], WHITE, 3)
+            cv2.rectangle(image, card_zones['Opponent-Card1'], card_zones["Opponent-Card2"], WHITE, 3)
 
+            # Calculate elapsed time
+            elapsed_time = time.time() - start_time
 
+            # Princess tower danger zones
+            attack = True
+            if x in range(405, 1083) and y in range(536, 1415) and label != "Princess-Tower":
+                attack = False
+                if not attack:
+                    print(f"Player princess tower 1 is attacking {label}")
+            
+            cv2.rectangle(image, card_zones["Player-princess1-tower1"], card_zones['Player-princess1-tower2'], BLUE, 3)
+            cv2.rectangle(image, card_zones["Player-princess2-tower1"], card_zones['Player-princess2-tower2'], BLUE, 3)
+            cv2.rectangle(image, card_zones["Opponent-princess1-tower1"], card_zones['Opponent-princess1-tower2'], BLUE, 3)
+            cv2.rectangle(image, card_zones["Opponent-princess2-tower1"], card_zones['Opponent-princess2-tower2'], BLUE, 3)
 
 
             # Draw label text
@@ -110,7 +141,7 @@ pipeline = InferencePipeline.init(
     on_prediction=on_prediction,
     api_key=api_key
 )
-
+start_time = time.time()
 print("Starting pipeline...") 
 pipeline.start()
 
