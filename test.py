@@ -7,6 +7,8 @@ from openai import OpenAI
 import time
 
 api_key = "Zw9s4qJmfSsVpb4IerO9"
+client = OpenAI(api_key = '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')
+
 
 my_cardsc = []
 enemies_cardsc = []
@@ -14,8 +16,7 @@ my_cardsa = []
 enemies_cardsa = []
 my_hand = []
 enemy_hand = []
-
-client = OpenAI(api_key = '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')
+detected_labels = []
 
 
 # Colors
@@ -147,14 +148,20 @@ def on_prediction(
             
 
             # Princess tower danger zones
-            if x in range(405, 536) and y in range(1083, 1415) and label != "T-archer-tower" and label not in prev_detections and label not in enemies_cardsa:
-                    print(f"Player princess tower 1 is attacking {label}")           
-            if x in range(900, 1039) and y in range(1115, 1415) and label != "T-archer-tower" and label not in prev_detections and label not in enemies_cardsa:
-                    print(f"Player princess tower 2 is attacking {label}")            
-            if x in range(405, 545) and y in range(610, 942) and label != "T-archer-tower" and label not in prev_detections and label not in my_cardsa:
-                    print(f"Opponent princess tower 1 is attacking {label}")  
-            if x in range(912, 1042) and y in range(608, 942) and label != "T-archer-tower" and label not in prev_detections and label not in my_cardsa:
+
+            if label not in detected_labels:
+                if x in range(405, 536) and y in range(1083, 1415) and label != "T-archer-tower" and label not in my_cardsa:
+                    print(f"Player princess tower 1 is attacking {label}")
+                    detected_labels.append(label)
+                if x in range(900, 1039) and y in range(1115, 1415) and label != "T-archer-tower" and label not in my_cardsa:
+                    print(f"Player princess tower 2 is attacking {label}")
+                    detected_labels.append(label)
+                if x in range(405, 545) and y in range(610, 942) and label != "T-archer-tower" and label not in enemies_cardsa:
+                    print(f"Opponent princess tower 1 is attacking {label}")
+                    detected_labels.append(label)
+                if x in range(912, 1042) and y in range(608, 942) and label != "T-archer-tower" and label not in enemies_cardsa:
                     print(f"Opponent princess tower 2 is attacking {label}")
+                    detected_labels.append(label)
 
             cv2.rectangle(image, card_zones["Player-princess1-tower1"], card_zones['Player-princess1-tower2'], BLUE, 3)
             cv2.rectangle(image, card_zones["Player-princess2-tower1"], card_zones['Player-princess2-tower2'], BLUE, 3)
@@ -179,7 +186,7 @@ def on_prediction(
 pipeline = InferencePipeline.init(
     model_id="clash-royale-detection-cysig/6",
     max_fps=60,
-    confidence=0.5,
+    confidence=0.73,
     video_reference='/Users/owner/Downloads/clash-royale/test.mp4',
     on_prediction=on_prediction,
     api_key=api_key
