@@ -8,8 +8,12 @@ import time
 
 api_key = "Zw9s4qJmfSsVpb4IerO9"
 
-my_cards = []
-enemies_cards = []
+my_cardsc = []
+enemies_cardsc = []
+my_cardsa = []
+enemies_cardsa = []
+my_hand = []
+enemy_hand = []
 
 client = OpenAI(api_key = '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')
 
@@ -20,6 +24,9 @@ GREEN = (0, 255, 0)
 RED = (0, 0, 255)
 BLUE = (255, 0, 0)
 BLACK = (0, 0, 0)
+
+prev_detections = []
+detections = []
 
 card_zones =  {
     "Player-Card1": ([0, 1650]), 
@@ -36,13 +43,33 @@ card_zones =  {
     "Opponent-princess2-tower2": ([1042, 942]),
                 }
 
+correlation = {
+    "C-hog-rider": "A-hog-rider",
+    "C-ice spirit": "A-ice-spirit",
+    "C-ice-golem": "A-ice-golem",
+    "C-minion-horde": "A-minion-horde",
+    "C-canon": "A-canon",
+    "C-fireball": "A-fireball",
+    "C-log": "A-log",
+    "C-balloon": "A-balloon",
+    "C-freeze": "A-freeze",
+    "C-musketeer": "A-musketeer",
+    "C-royal-ghost": "A-royal-ghost",
+    "C-skeletons": "A-skeletons",
+    "C-valkyrie": "A-valkyrie",
+    "C-wall-breakers": "A-wall-breakers",
+    "C-wizard": "A-wizard",
+}
+
 def on_prediction(
     predictions: Union[dict, List[Optional[dict]]],
-    video_frame: Union[VideoFrame, List[Optional[VideoFrame]]]
+    video_frame: Union[VideoFrame, List[Optional[VideoFrame]]],
 ) -> None:
     if not isinstance(predictions, list):
         predictions = [predictions]
         video_frame = [video_frame]
+    
+    global prev_detections, detections, my_hand, enemy_hand
 
     for prediction, frame in zip(predictions, video_frame):
         if prediction is None:
@@ -61,16 +88,26 @@ def on_prediction(
             label = obj['class']
             confidence = obj['confidence']
             if x in range(0, 1400) and y in range(1600, 1900):
-                if label not in my_cards:
-                    print(f"Player placed {label}")
-                    my_cards.append(label)
+                if label not in my_cardsc:
+                    print(f"Player has {label} in deck")
+                    my_cardsc.append(label)
+                    my_cardsa.append(correlation[label])
             elif x in range(0, 1400) and y in range(0, 300):
-                if label not in enemies_cards:
-                    print(f"Opponent placed {label}")
-                    enemies_cards.append(label)
-          
-            '''if len(enemies_cards) == 4 and prev_len != len(my_cards):
+                if label not in enemies_cardsc:
+                    print(f"Opponent has {label} in deck")
+                    enemies_cardsc.append(label)
+                    enemies_cardsa.append(correlation[label])
+            
+            if y in range(1000) and label not in prev_detections and label in enemies_cardsa:
+                print(f"Opponent placed {label}")
+            if y not in range(1000) and label not in prev_detections and label in my_cardsa:
+                print(f"Player placed {label}")
 
+            if len(enemies_cardsc) == 4:
+                print("Cool")
+
+
+            a = '''
                 completion = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -82,7 +119,8 @@ def on_prediction(
                     Strategies to counter deck: [YOUR ANSWER HERE]}
                 ]
                 )
-                print(completion.choices[0].message)'''
+                print(completion.choices[0].message)
+            '''
             # prev_len = len(my_cards)
             # Calculate top-left and bottom-right coordinates of the bounding box
             start_point = (int(x - width / 2), int(y - height / 2))
@@ -105,25 +143,30 @@ def on_prediction(
             cv2.rectangle(image, card_zones["Player-Card1"], card_zones['Player-Card2'], WHITE, 3)
             cv2.rectangle(image, card_zones['Opponent-Card1'], card_zones["Opponent-Card2"], WHITE, 3)
 
-            # Calculate elapsed time
-            elapsed_time = time.time() - start_time
+            detections.append(label)
+            
 
             # Princess tower danger zones
-            attack = True
-            if x in range(405, 1083) and y in range(536, 1415) and label != "Princess-Tower":
-                attack = False
-                if not attack:
-                    print(f"Player princess tower 1 is attacking {label}")
-            
+            if x in range(405, 536) and y in range(1083, 1415) and label != "T-archer-tower" and label not in prev_detections and label not in enemies_cardsa:
+                    print(f"Player princess tower 1 is attacking {label}")           
+            if x in range(900, 1039) and y in range(1115, 1415) and label != "T-archer-tower" and label not in prev_detections and label not in enemies_cardsa:
+                    print(f"Player princess tower 2 is attacking {label}")            
+            if x in range(405, 545) and y in range(610, 942) and label != "T-archer-tower" and label not in prev_detections and label not in my_cardsa:
+                    print(f"Opponent princess tower 1 is attacking {label}")  
+            if x in range(912, 1042) and y in range(608, 942) and label != "T-archer-tower" and label not in prev_detections and label not in my_cardsa:
+                    print(f"Opponent princess tower 2 is attacking {label}")
+
             cv2.rectangle(image, card_zones["Player-princess1-tower1"], card_zones['Player-princess1-tower2'], BLUE, 3)
             cv2.rectangle(image, card_zones["Player-princess2-tower1"], card_zones['Player-princess2-tower2'], BLUE, 3)
             cv2.rectangle(image, card_zones["Opponent-princess1-tower1"], card_zones['Opponent-princess1-tower2'], BLUE, 3)
             cv2.rectangle(image, card_zones["Opponent-princess2-tower1"], card_zones['Opponent-princess2-tower2'], BLUE, 3)
 
-
+            cv2.line(image, (0, 1000), (1400, 1000), RED, 3)
             # Draw label text
             cv2.putText(image, label_text, (start_point[0], start_point[1] - baseline),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+        prev_detections = detections.copy()
+        detections = []
 
         # Display the resulting frame
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) 
