@@ -46,7 +46,7 @@ card_zones =  {
 
 correlation = {
     "C-hog-rider": "A-hog-rider",
-    "C-ice spirit": "A-ice-spirit",
+    "C-ice-spirit": "A-ice-spirit",
     "C-ice-golem": "A-ice-golem",
     "C-minion-horde": "A-minion-horde",
     "C-canon": "A-canon",
@@ -184,9 +184,9 @@ def on_prediction(
             break
 
 pipeline = InferencePipeline.init(
-    model_id="clash-royale-detection-cysig/6",
+    model_id="clash-royale-detection-cysig/7",
     max_fps=60,
-    confidence=0.73,
+    confidence=0.6,
     video_reference='/Users/owner/Downloads/clash-royale/test.mp4',
     on_prediction=on_prediction,
     api_key=api_key
