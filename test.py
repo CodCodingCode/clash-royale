@@ -5,10 +5,11 @@ from inference import InferencePipeline
 import time
 from openai import OpenAI
 import time
+import pygame
+
 
 api_key = "Zw9s4qJmfSsVpb4IerO9"
 client = OpenAI(api_key = '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')
-
 
 my_cardsc = []
 enemies_cardsc = []
@@ -17,7 +18,6 @@ enemies_cardsa = []
 my_hand = []
 enemy_hand = []
 detected_labels = []
-
 
 # Colors
 WHITE = (255, 255, 255)
@@ -62,6 +62,19 @@ correlation = {
     "C-wizard": "A-wizard",
 }
 
+# Initialize Pygame
+pygame.init()
+
+# Define some colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+LIGHT_BLUE = (173, 216, 230)
+
+screen = (600, 800)
+
 def on_prediction(
     predictions: Union[dict, List[Optional[dict]]],
     video_frame: Union[VideoFrame, List[Optional[VideoFrame]]],
@@ -78,7 +91,6 @@ def on_prediction(
 
         # Extract image from the VideoFrame object
         image = frame.image
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
         for obj in prediction['predictions']:
             # Get bounding box coordinates
@@ -107,22 +119,6 @@ def on_prediction(
             if len(enemies_cardsc) == 4:
                 print("Cool")
 
-
-            a = '''
-                completion = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a clash royale expert, that knows the best decks to play."},
-                    {"role": "user", "content": I am playing clash royale right now and need to know the deck of my opponent. 
-                     What deck includes a minion horde and ice spirit. Please answer in this format:
-                    Possible Cards: [YOUR ANSWER HERE]
-                    Win Rate with Deck: [YOUR ANSWER HERE]
-                    Strategies to counter deck: [YOUR ANSWER HERE]}
-                ]
-                )
-                print(completion.choices[0].message)
-            '''
-            # prev_len = len(my_cards)
             # Calculate top-left and bottom-right coordinates of the bounding box
             start_point = (int(x - width / 2), int(y - height / 2))
             end_point = (int(x + width / 2), int(y + height / 2))
@@ -146,9 +142,7 @@ def on_prediction(
 
             detections.append(label)
             
-
             # Princess tower danger zones
-
             if label not in detected_labels:
                 if x in range(405, 536) and y in range(1083, 1415) and label != "T-archer-tower" and label not in my_cardsa:
                     print(f"Player princess tower 1 is attacking {label}")
@@ -175,8 +169,13 @@ def on_prediction(
         prev_detections = detections.copy()
         detections = []
 
+        # Pygame code
+        screen.fill(WHITE)
+
+        pygame.draw.rect(screen, LIGHT_BLUE, (x, y, width, height))
+        
+
         # Display the resulting frame
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) 
         cv2.imshow('Frame', image)
 
         # Press 'q' to exit the video display window
@@ -191,8 +190,9 @@ pipeline = InferencePipeline.init(
     on_prediction=on_prediction,
     api_key=api_key
 )
+
 start_time = time.time()
-print("Starting pipeline...") 
+print("Starting pipeline...")
 pipeline.start()
 
 pipeline.join()
