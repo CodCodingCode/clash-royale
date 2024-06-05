@@ -116,9 +116,6 @@ def on_prediction(
             if y not in range(1000) and label not in prev_detections and label in my_cardsa:
                 print(f"Player placed {label}")
 
-            if len(enemies_cardsc) == 4:
-                print("Cool")
-
             # Calculate top-left and bottom-right coordinates of the bounding box
             start_point = (int(x - width / 2), int(y - height / 2))
             end_point = (int(x + width / 2), int(y + height / 2))
