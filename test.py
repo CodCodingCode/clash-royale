@@ -168,12 +168,9 @@ def on_prediction(
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
         prev_detections = detections.copy()
         detections = []
-
-        # Pygame code
-        screen.fill(WHITE)
-
-        pygame.draw.rect(screen, LIGHT_BLUE, (x, y, width, height))
         
+        # CHange image color from BGR to RGB
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # Display the resulting frame
         cv2.imshow('Frame', image)
