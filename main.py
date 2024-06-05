@@ -7,8 +7,8 @@ from openai import OpenAI
 import pygame
 
 
-api_key = "Zw9s4qJmfSsVpb4IerO9"
-client = OpenAI(api_key = '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')
+api_key = "ROBOFLOW_API_KEY"
+client = OpenAI(api_key = 'OPENAI_API_KEY')
 
 my_cardsc = []
 enemies_cardsc = []
