@@ -5,7 +5,7 @@ from inference import InferencePipeline
 import pygame
 import time
 
-api_key = "Zw9s4qJmfSsVpb4IerO9"
+api_key = "ROBOFLOW_API_KEY"
 
 # Colors
 WHITE = (255, 255, 255)
