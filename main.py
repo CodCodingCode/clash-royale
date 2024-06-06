@@ -5,19 +5,22 @@ from inference import InferencePipeline
 import time
 from openai import OpenAI
 import pygame
+import os
 
-
-api_key = "INSERT_API_KEY_HERE"
-client = OpenAI(api_key = '')
+roboflow_api_key = "INSERT API KEY HERE"
+client = OpenAI(api_key = 'API_KEY')
 
 my_cardsc = []
 enemies_cardsc = []
 my_cardsa = []
 enemies_cardsa = []
 my_hand = []
-enemy_hand = []
+enemy_hand = ["", "", "", "", "", "", "", ""]
 detected_labels = []
-prev_message = ""
+prev_message_o = ""
+prev_message_m = ""
+once = True
+prev_len_hand = 0
 
 # Colors
 WHITE = (255, 255, 255)
@@ -122,26 +125,53 @@ def detect_deck(x, y, label):
 def tower_attack(x, y, label):
     # Princess tower danger zones
     if label not in detected_labels:
-        if x in range(405, 536) and y in range(1083, 1415) and label != "T-archer-tower" and label not in my_cardsa:
+        if x in range(405, 536) and y in range(1083, 1415) and label not in my_cardsa:
             print(f"Player princess tower 1 is attacking {label}")
             detected_labels.append(label)
-        if x in range(900, 1039) and y in range(1115, 1415) and label != "T-archer-tower" and label not in my_cardsa:
+        if x in range(900, 1039) and y in range(1115, 1415) and label not in my_cardsa:
             print(f"Player princess tower 2 is attacking {label}")
             detected_labels.append(label)
-        if x in range(405, 545) and y in range(610, 942) and label != "T-archer-tower" and label not in enemies_cardsa:
+        if x in range(405, 545) and y in range(610, 942) and label not in enemies_cardsa:
             print(f"Opponent princess tower 1 is attacking {label}")
             detected_labels.append(label)
-        if x in range(912, 1042) and y in range(608, 942) and label != "T-archer-tower" and label not in enemies_cardsa:
+        if x in range(912, 1042) and y in range(608, 942) and label not in enemies_cardsa:
             print(f"Opponent princess tower 2 is attacking {label}")
             detected_labels.append(label)
 
-def detect_placement(x, y, label):
-    if y in range(1000) and label not in prev_detections and label in enemies_cardsa and label != prev_message:
+def detect_placement(height, y, label):
+    global prev_message_o, prev_message_m
+    if (y-height) in range(1200) and label not in prev_detections and label in enemies_cardsa and label != prev_message_o:
         print(f"Opponent placed {label}")
-        prev_message = label
-    if y not in range(1000) and label not in prev_detections and label in my_cardsa and label != prev_message:
+        prev_message_o = label
+        if label in enemy_hand:
+            enemy_hand.remove(label)
+            enemy_hand.insert(0, label)
+        else:
+            enemy_hand.insert(0, label)
+            enemy_hand.pop()
+
+    if (y-height) in range(1400) and y not in range(1000) and label not in prev_detections and label in my_cardsa and label != prev_message_m:
         print(f"Player placed {label}")
-        prev_message = label
+        prev_message_m = label
+
+def predict_enemy_deck(enemy_hand):
+    if once or prev_len_hand != len(enemy_hand):
+        completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a clash royale expert that knows all the decks."},
+            {"role": "user", "content": f'''I am playing clash royale right now and need to know the deck of my opponent. 
+             What deck includes a {my_cardsa}. Please answer in this format: 
+             Deck: [YOUR ANSWER HERE] 
+             Possible Cards: [YOUR ANSWER HERE] 
+             Win Rate with Deck: [YOUR ANSWER HERE INTEGER] 
+             Strategies to counter deck: [YOUR ANSWER HERE].
+             '''}
+        ]
+        )
+        print(completion.choices[0].message.content)
+        once = False
+        prev_len_hand = len(enemy_hand)
 
 def on_prediction(
     predictions: Union[dict, List[Optional[dict]]],
@@ -176,17 +206,25 @@ def on_prediction(
             elif label == "T-king-tower":
                 draw_bounding_box(image, x, y, width, height, label, confidence)
                 continue
-            
+
+    
             detect_deck(x, y, label)
-            detect_placement(x, y, label)
+            detect_placement(height, y, label)
             tower_attack(x, y, label)
             
             detections.append(label)
+            
+            if len(enemies_cardsc) == 4:
+                predict_enemy_deck(enemies_cardsc)
+
+            if len(enemies_cardsc) >= 4:
+                for num in enemy_hand[4:]:
+                    if num != 0:
+                        print(f"Opponent has card {num} in hand")
 
             draw_bounding_box(image, x, y, width, height, label, confidence)
 
         draw_external_boxes(image)
-
         prev_detections = detections.copy()
         detections = []
         
@@ -202,9 +240,9 @@ pipeline = InferencePipeline.init(
     model_id="clash-royale-detection-cysig/7",
     max_fps=60,
     confidence=0.5,
-    video_reference='/Users/owner/Downloads/clash-royale/test1.mp4',
+    video_reference='test.mp4',
     on_prediction=on_prediction,
-    api_key=api_key
+    api_key=roboflow_api_key
 )
 
 start_time = time.time()
@@ -213,3 +251,8 @@ pipeline.start()
 
 pipeline.join()
 cv2.destroyAllWindows()
+
+
+
+#TODO
+#IMPLEMENT A WAY OF SEEING WHO PLACED WHAT 
