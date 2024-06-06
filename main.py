@@ -7,8 +7,8 @@ from openai import OpenAI
 import pygame
 import os
 
-roboflow_api_key = "INSERT API KEY HERE"
-client = OpenAI(api_key = 'API_KEY')
+roboflow_api_key = "INSERT ROBOFLOW API"
+client = OpenAI(api_key = 'INSERT PERSONAL OPENAI API')
 
 my_cardsc = []
 enemies_cardsc = []
