@@ -7,8 +7,8 @@ from openai import OpenAI
 import pygame
 
 
-api_key = "ROBOFLOW_API_KEY"
-client = OpenAI(api_key = 'OPENAI_API_KEY')
+api_key = "INSERT_API_KEY_HERE"
+client = OpenAI(api_key = '')
 
 my_cardsc = []
 enemies_cardsc = []
@@ -75,6 +75,74 @@ LIGHT_BLUE = (173, 216, 230)
 
 screen_pygame = (600, 800)
 
+def draw_external_boxes(image):
+    cv2.rectangle(image, card_zones["Player-Card1"], card_zones['Player-Card2'], WHITE, 3)
+    cv2.rectangle(image, card_zones['Opponent-Card1'], card_zones["Opponent-Card2"], WHITE, 3)
+
+    cv2.rectangle(image, card_zones["Player-princess1-tower1"], card_zones['Player-princess1-tower2'], BLUE, 3)
+    cv2.rectangle(image, card_zones["Player-princess2-tower1"], card_zones['Player-princess2-tower2'], BLUE, 3)
+    cv2.rectangle(image, card_zones["Opponent-princess1-tower1"], card_zones['Opponent-princess1-tower2'], BLUE, 3)
+    cv2.rectangle(image, card_zones["Opponent-princess2-tower1"], card_zones['Opponent-princess2-tower2'], BLUE, 3)
+
+    cv2.line(image, (0, 1000), (1400, 1000), RED, 3)
+
+def draw_bounding_box(image, x, y, width, height, label, confidence):
+
+    # Calculate top-left and bottom-right coordinates of the bounding box
+    start_point = (int(x - width / 2), int(y - height / 2))
+    end_point = (int(x + width / 2), int(y + height / 2))
+
+    # Draw the bounding box
+    cv2.rectangle(image, start_point, end_point, (0, 255, 0), 2)
+
+    # Prepare label text
+    label_text = f"{label}: {confidence:.2f}"
+
+    # Get text size
+    (text_width, text_height), baseline = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+
+    # Draw background rectangle for the label
+    cv2.rectangle(image, (start_point[0], start_point[1] - text_height - baseline),
+                    (start_point[0] + text_width, start_point[1]), (0, 255, 0), cv2.FILLED)
+    cv2.putText(image, label_text, (start_point[0], start_point[1] - baseline),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+
+def detect_deck(x, y, label):
+    if x in range(0, 1400) and y in range(1600, 1900):
+        if label not in my_cardsc:
+            print(f"Player has {label} in deck")
+            my_cardsc.append(label)
+            my_cardsa.append(correlation[label])
+    elif x in range(0, 1400) and y in range(0, 300):
+        if label not in enemies_cardsc:
+            print(f"Opponent has {label} in deck")
+            enemies_cardsc.append(label)
+            enemies_cardsa.append(correlation[label])
+
+def tower_attack(x, y, label):
+    # Princess tower danger zones
+    if label not in detected_labels:
+        if x in range(405, 536) and y in range(1083, 1415) and label != "T-archer-tower" and label not in my_cardsa:
+            print(f"Player princess tower 1 is attacking {label}")
+            detected_labels.append(label)
+        if x in range(900, 1039) and y in range(1115, 1415) and label != "T-archer-tower" and label not in my_cardsa:
+            print(f"Player princess tower 2 is attacking {label}")
+            detected_labels.append(label)
+        if x in range(405, 545) and y in range(610, 942) and label != "T-archer-tower" and label not in enemies_cardsa:
+            print(f"Opponent princess tower 1 is attacking {label}")
+            detected_labels.append(label)
+        if x in range(912, 1042) and y in range(608, 942) and label != "T-archer-tower" and label not in enemies_cardsa:
+            print(f"Opponent princess tower 2 is attacking {label}")
+            detected_labels.append(label)
+
+def detect_placement(x, y, label):
+    if y in range(1000) and label not in prev_detections and label in enemies_cardsa and label != prev_message:
+        print(f"Opponent placed {label}")
+        prev_message = label
+    if y not in range(1000) and label not in prev_detections and label in my_cardsa and label != prev_message:
+        print(f"Player placed {label}")
+        prev_message = label
+
 def on_prediction(
     predictions: Union[dict, List[Optional[dict]]],
     video_frame: Union[VideoFrame, List[Optional[VideoFrame]]],
@@ -100,74 +168,25 @@ def on_prediction(
             height = obj['height']
             label = obj['class']
             confidence = obj['confidence']
-            if x in range(0, 1400) and y in range(1600, 1900):
-                if label not in my_cardsc:
-                    print(f"Player has {label} in deck")
-                    my_cardsc.append(label)
-                    my_cardsa.append(correlation[label])
-            elif x in range(0, 1400) and y in range(0, 300):
-                if label not in enemies_cardsc:
-                    print(f"Opponent has {label} in deck")
-                    enemies_cardsc.append(label)
-                    enemies_cardsa.append(correlation[label])
+
+            if label == "T-archer-tower":
+                draw_bounding_box(image, x, y, width, height, label, confidence)
+                continue
             
-            if y in range(1000) and label not in prev_detections and label in enemies_cardsa and label != prev_message:
-                print(f"Opponent placed {label}")
-                prev_message = label
-            if y not in range(1000) and label not in prev_detections and label in my_cardsa and label != prev_message:
-                print(f"Player placed {label}")
-                prev_message = label
-
-            if len(enemies_cardsc) == 4:
-                print("Cool")
-
-            # Calculate top-left and bottom-right coordinates of the bounding box
-            start_point = (int(x - width / 2), int(y - height / 2))
-            end_point = (int(x + width / 2), int(y + height / 2))
-
-            # Draw the bounding box
-            cv2.rectangle(image, start_point, end_point, (0, 255, 0), 2)
-
-            # Prepare label text
-            label_text = f"{label}: {confidence:.2f}"
-
-            # Get text size
-            (text_width, text_height), baseline = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-
-            # Draw background rectangle for the label
-            cv2.rectangle(image, (start_point[0], start_point[1] - text_height - baseline),
-                          (start_point[0] + text_width, start_point[1]), (0, 255, 0), cv2.FILLED)
-
-            # Card zones
-            cv2.rectangle(image, card_zones["Player-Card1"], card_zones['Player-Card2'], WHITE, 3)
-            cv2.rectangle(image, card_zones['Opponent-Card1'], card_zones["Opponent-Card2"], WHITE, 3)
-
+            elif label == "T-king-tower":
+                draw_bounding_box(image, x, y, width, height, label, confidence)
+                continue
+            
+            detect_deck(x, y, label)
+            detect_placement(x, y, label)
+            tower_attack(x, y, label)
+            
             detections.append(label)
-            
-            # Princess tower danger zones
-            if label not in detected_labels:
-                if x in range(405, 536) and y in range(1083, 1415) and label != "T-archer-tower" and label not in my_cardsa:
-                    print(f"Player princess tower 1 is attacking {label}")
-                    detected_labels.append(label)
-                if x in range(900, 1039) and y in range(1115, 1415) and label != "T-archer-tower" and label not in my_cardsa:
-                    print(f"Player princess tower 2 is attacking {label}")
-                    detected_labels.append(label)
-                if x in range(405, 545) and y in range(610, 942) and label != "T-archer-tower" and label not in enemies_cardsa:
-                    print(f"Opponent princess tower 1 is attacking {label}")
-                    detected_labels.append(label)
-                if x in range(912, 1042) and y in range(608, 942) and label != "T-archer-tower" and label not in enemies_cardsa:
-                    print(f"Opponent princess tower 2 is attacking {label}")
-                    detected_labels.append(label)
 
-            cv2.rectangle(image, card_zones["Player-princess1-tower1"], card_zones['Player-princess1-tower2'], BLUE, 3)
-            cv2.rectangle(image, card_zones["Player-princess2-tower1"], card_zones['Player-princess2-tower2'], BLUE, 3)
-            cv2.rectangle(image, card_zones["Opponent-princess1-tower1"], card_zones['Opponent-princess1-tower2'], BLUE, 3)
-            cv2.rectangle(image, card_zones["Opponent-princess2-tower1"], card_zones['Opponent-princess2-tower2'], BLUE, 3)
+            draw_bounding_box(image, x, y, width, height, label, confidence)
 
-            cv2.line(image, (0, 1000), (1400, 1000), RED, 3)
-            # Draw label text
-            cv2.putText(image, label_text, (start_point[0], start_point[1] - baseline),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+        draw_external_boxes(image)
+
         prev_detections = detections.copy()
         detections = []
         
